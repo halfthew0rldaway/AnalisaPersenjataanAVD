@@ -140,7 +140,7 @@ class DashboardController extends Controller
             ->whereNotNull('Year_Introduced')
             ->where('Year_Introduced', '!=', '')
             // Filter out non-numeric years if any, and order chronologically
-            ->orderByRaw('CAST(Year_Introduced AS INTEGER) ASC')
+            ->orderBy('Year_Introduced', 'ASC')
             ->groupBy('Year_Introduced')
             ->get();
             

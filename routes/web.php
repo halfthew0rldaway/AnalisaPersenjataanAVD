@@ -16,3 +16,6 @@ Route::get('/dashboard/indonesia', [DashboardController::class, 'indonesia'])->n
 
 // Route untuk mengambil data grafik & KPI via AJAX
 Route::get('/dashboard/data', [DashboardController::class, 'getData'])->name('dashboard.data');
+
+// Route untuk menampilkan halaman EDA dan Data Cleaning
+Route::get('/dashboard/eda', [DashboardController::class, 'eda'])->name('dashboard.eda');

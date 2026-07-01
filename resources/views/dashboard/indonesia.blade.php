@@ -186,7 +186,45 @@
                 </div>
             </div>
         </div>
-        
+     <div class="dashboard-card p-6 flex flex-col overflow-hidden w-full mt-6">
+            
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
+                <div>
+                    <h3 class="text-base font-semibold text-gray-800">Detail Sistem Persenjataan Global</h3>
+                    <p class="text-xs text-gray-500 mt-1">Tabulasi data mentah berdasarkan filter aktif (Limit 100 data)</p>
+                </div>
+                
+                <div class="w-full sm:w-72 relative">
+                    <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                        <i class="ph ph-magnifying-glass text-gray-400"></i>
+                    </div>
+                    <input type="text" id="table-search" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-googleBlue focus:border-googleBlue block w-full pl-10 p-2.5 outline-none transition-colors" placeholder="Cari nama, negara, matra...">
+                </div>
+            </div> <div class="overflow-x-auto w-full border border-gray-200 rounded-lg">
+                <table class="min-w-full text-left text-sm whitespace-nowrap">
+                    <thead class="uppercase tracking-wider bg-gray-50 border-b border-gray-200 text-gray-600 text-[11px] font-bold">
+                        <tr>
+                            <th scope="col" class="px-4 py-3">Nama Senjata</th>
+                            <th scope="col" class="px-4 py-3">Kategori</th>
+                            <th scope="col" class="px-4 py-3 text-center">Tahun Rilis</th>
+
+                            <th scope="col" class="px-4 py-3">Matra</th>
+                            <th scope="col" class="px-4 py-3">Negara Asal</th>
+                            <th scope="col" class="px-4 py-3 text-right">Harga (USD)</th>
+                            <th scope="col" class="px-4 py-3 text-center">Teruji Tempur</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dataTableBody" class="divide-y divide-gray-200 bg-white">
+                        <tr>
+                            <td colspan="6" class="px-4 py-8 text-center text-gray-500 text-sm">Memuat data...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <div id="pagination-container" class="w-full mt-4"></div>
+            
+        </div>
     </main>
 
     <script>
@@ -195,7 +233,10 @@
         Chart.defaults.color = '#6b7280'; // gray-500
         Chart.defaults.scale.grid.color = '#f3f4f6'; // gray-100
         Chart.defaults.scale.grid.borderColor = '#e5e7eb'; // gray-200
-        
+        let currentPage = 1;
+        const rowsPerPage = 10;
+              let searchQuery = "";
+        let filteredTableData = [];
         const tooltipDefaults = {
             backgroundColor: 'rgba(255, 255, 255, 0.95)',
             titleColor: '#111827',
@@ -221,7 +262,11 @@
             try {
                 const response = await fetch(url);
                 currentData = await response.json();
-                
+                             filteredTableData = currentData.tableData || [];
+                searchQuery = "";
+                const searchInput = document.getElementById('table-search');
+                if (searchInput) searchInput.value = "";
+                currentPage = 1;
                 updateKPIs(currentData.kpi);
                 
                 // Render charts with sorting applied
@@ -229,7 +274,7 @@
                 renderLineChart();
                 renderPieChart();
                 renderScatterChart();
-                
+                renderTable();
             } catch (error) {
                 console.error('Error fetching data:', error);
             }
@@ -457,15 +502,17 @@
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: {
+             plugins: {
                         legend: { display: false },
                         tooltip: {
                             ...tooltipDefaults,
                             callbacks: {
                                 label: function(context) {
                                     let point = context.raw;
+                                    // TAMBAHKAN KATEGORI KE DALAM ARRAY RETURN TOOLTIP
                                     return [
                                         point.name,
+                                        'Kategori: ' + point.category, 
                                         'Harga: $' + point.x.toLocaleString(),
                                         'Pengguna: ' + point.y + ' negara'
                                     ];
@@ -495,7 +542,122 @@
             
             document.getElementById('filter-category').addEventListener('change', fetchDashboardData);
             document.getElementById('filter-year').addEventListener('change', fetchDashboardData);
+         document.getElementById('table-search').addEventListener('input', (e) => {
+                searchQuery = e.target.value.toLowerCase();
+                
+                if (currentData && currentData.tableData) {
+                    // Filter data berdasarkan semua kolom teks yang relevan
+                    filteredTableData = currentData.tableData.filter(row => {
+                        return (
+                      (row.Weapon_Name && row.Weapon_Name.toLowerCase().includes(searchQuery)) ||
+                            (row.Theater_of_Operation && row.Theater_of_Operation.toLowerCase().includes(searchQuery)) ||
+                            (row.Country_of_Origin && row.Country_of_Origin.toLowerCase().includes(searchQuery)) ||
+                            (row.Combat_Proven && row.Combat_Proven.toLowerCase().includes(searchQuery)) 
+                         );
+                    });
+                }
+                
+                currentPage = 1; // Kembali ke halaman 1 saat mengetik pencarian
+                renderTable();
+            });
         });
+    function renderTable() {
+    if (!filteredTableData) return; 
+    
+    const tbody = document.getElementById('dataTableBody');
+    const paginationContainer = document.getElementById('pagination-container');
+    tbody.innerHTML = ''; 
+
+    if (filteredTableData.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="px-4 py-8 text-center text-gray-500 text-sm">Tidak ada data yang sesuai dengan pencarian "${searchQuery}".</td></tr>`;
+        paginationContainer.innerHTML = '';
+        return;
+    }
+
+    const totalRows = filteredTableData.length;
+    const startIndex = (currentPage - 1) * rowsPerPage;
+    const endIndex = Math.min(startIndex + rowsPerPage, totalRows);
+    const paginatedData = filteredTableData.slice(startIndex, endIndex);
+
+    paginatedData.forEach(row => {
+        let badgeClass = 'bg-gray-100 text-gray-800';
+        if (row.Combat_Proven === 'Yes') badgeClass = 'bg-green-100 text-green-800';
+        if (row.Combat_Proven === 'No') badgeClass = 'bg-red-100 text-red-800';
+        if (row.Combat_Proven === 'Limited') badgeClass = 'bg-yellow-100 text-yellow-800';
+
+        let priceFormatted = row.Unit_Cost_USD ? '$' + parseFloat(row.Unit_Cost_USD).toLocaleString() : 'N/A';
+
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-gray-50 transition-colors";
+        tr.innerHTML = `
+            <td class="px-4 py-3 font-semibold text-gray-900">${row.Weapon_Name || '-'}</td>
+            <td class="px-4 py-3 text-gray-600">${row.Category || '-'}</td>
+            <td class="px-4 py-3 text-center text-gray-600">${row.Year_Introduced || '-'}</td> 
+            
+            <td class="px-4 py-3 text-gray-600">${row.Theater_of_Operation || '-'}</td>
+            <td class="px-4 py-3 text-gray-600">${row.Country_of_Origin || '-'}</td>
+            
+            <td class="px-4 py-3 text-gray-600 font-mono text-right">${priceFormatted}</td>
+            <td class="px-4 py-3 text-center">
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold tracking-wide uppercase ${badgeClass}">
+                    ${row.Combat_Proven || 'UNKNOWN'}
+                </span>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+
+    renderPaginationControls(totalRows, startIndex, endIndex);
+}
+        function renderPaginationControls(totalRows, startIndex, endIndex) {
+            const container = document.getElementById('pagination-container');
+            const totalPages = Math.ceil(totalRows / rowsPerPage);
+
+            if (totalPages <= 1) {
+                container.innerHTML = '';
+                return;
+            }
+
+            container.innerHTML = `
+                <div class="flex items-center justify-between border-t border-gray-200 bg-gray-50 px-4 py-3 sm:px-6">
+                    <div class="flex flex-1 justify-between sm:hidden">
+                        <button onclick="changePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''} class="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50">Previous</button>
+                        <button onclick="changePage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''} class="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50">Next</button>
+                    </div>
+                    <div class="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+                        <div>
+                            <p class="text-sm text-gray-700">
+                                Menampilkan <span class="font-medium">${startIndex + 1}</span> sampai <span class="font-medium">${endIndex}</span> dari <span class="font-medium">${totalRows}</span> data
+                            </p>
+                        </div>
+                        <div>
+                            <nav class="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
+                                <button onclick="changePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''} class="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50">
+                                    <span class="sr-only">Previous</span>
+                                    <i class="ph ph-caret-left"></i>
+                                </button>
+                                <span class="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 focus:outline-offset-0">
+                                    Halaman ${currentPage} dari ${totalPages}
+                                </span>
+                                <button onclick="changePage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''} class="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50">
+                                    <span class="sr-only">Next</span>
+                                    <i class="ph ph-caret-right"></i>
+                                </button>
+                            </nav>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+ function changePage(newPage) {
+            // UBAH BARIS INI: Gunakan filteredTableData
+            const totalPages = Math.ceil(filteredTableData.length / rowsPerPage);
+            
+            if (newPage >= 1 && newPage <= totalPages) {
+                currentPage = newPage;
+                renderTable();
+            }
+        }
     </script>
 </body>
 </html>

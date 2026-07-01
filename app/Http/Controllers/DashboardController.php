@@ -163,8 +163,9 @@ class DashboardController extends Controller
         // ==========================================
         // 5. DATA UNTUK SCATTER PLOT (Value for Money)
         // ==========================================
-        $scatterDataRaw = (clone $query)
-            ->select('Weapon_Name', 'Unit_Cost_USD', 'Num_Operator_Nations')
+ $scatterDataRaw = (clone $query)
+            // TAMBAHKAN 'Category' PADA SELECT DI BAWAH INI
+            ->select('Weapon_Name', 'Unit_Cost_USD', 'Num_Operator_Nations', 'Category') 
             ->whereNotNull('Unit_Cost_USD')
             ->where('Unit_Cost_USD', '>', 0)
             ->whereNotNull('Num_Operator_Nations')
@@ -175,10 +176,26 @@ class DashboardController extends Controller
             return [
                 'x' => (float) $item->Unit_Cost_USD,
                 'y' => (float) $item->Num_Operator_Nations,
-                'name' => $item->Weapon_Name
+                'name' => $item->Weapon_Name,
+                'category' => $item->Category // TAMBAHKAN DATA KATEGORI DI SINI
             ];
         });
-
+// ==========================================
+        // 6. DATA UNTUK TABEL DETAIL
+        // ==========================================
+        $tableData = (clone $query)
+            ->select(
+                'Weapon_Name', 
+                'Category', 
+                'Combat_Proven', 
+                'Country_of_Origin', // Kolom Rekomendasi
+                'Unit_Cost_USD',     // Kolom Rekomendasi
+                'Theater_of_Operation', // Kolom Rekomendasi
+                'Year_Introduced'
+            )
+            ->orderBy('Weapon_Name', 'asc')
+            
+            ->get();
         // Mengirimkan semua data kembali ke tampilan Frontend (Blade) dalam format JSON
         return response()->json([
             'kpi' => [
@@ -204,7 +221,8 @@ class DashboardController extends Controller
             ],
             'scatterChart' => [
                 'points' => $scatterPoints
-            ]
+            ],
+            'tableData' => $tableData
         ]);
     }
 }

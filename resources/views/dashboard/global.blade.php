@@ -30,6 +30,9 @@
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- AOS Animation -->
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
@@ -39,6 +42,12 @@
             border: 1px solid #e5e7eb;
             border-radius: 0.5rem;
             box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .dashboard-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px -8px rgba(0, 0, 0, 0.15);
+            border-color: #d1d5db;
         }
     </style>
 </head>
@@ -75,9 +84,10 @@
     </header>
 
     <!-- Tab Navigation -->
-    <div class="bg-white border-b border-gray-200 px-6 w-full flex items-center space-x-6 text-sm font-medium">
-        <a href="/dashboard/global" class="text-googleBlue py-3 border-b-2 border-googleBlue">Global Analytics</a>
-        <a href="/dashboard/indonesia" class="text-gray-500 hover:text-gray-700 py-3 border-b-2 border-transparent transition-colors">Indonesia Analytics</a>
+    <div class="bg-white border-b border-gray-200 px-6 w-full flex items-center space-x-6 text-sm font-medium overflow-x-auto">
+        <a href="/dashboard/global" class="text-googleBlue py-3 border-b-2 border-googleBlue whitespace-nowrap">Global Analytics</a>
+        <a href="/dashboard/indonesia" class="text-gray-500 hover:text-gray-700 py-3 border-b-2 border-transparent transition-colors whitespace-nowrap">Indonesia Analytics</a>
+        <a href="/dashboard/eda" class="text-gray-500 hover:text-gray-700 py-3 border-b-2 border-transparent transition-colors whitespace-nowrap">EDA & Data Cleaning</a>
     </div>
 
     <!-- Main Content (Full Width) -->
@@ -85,7 +95,7 @@
         
         <!-- Scorecards / KPIs -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div class="dashboard-card p-5 flex items-center gap-4">
+            <div class="dashboard-card p-5 flex items-center gap-4" data-aos="fade-up" data-aos-delay="0">
                 <div class="w-12 h-12 rounded-xl bg-blue-50 text-googleBlue flex items-center justify-center text-2xl shrink-0">
                     <i class="ph-fill ph-crosshair"></i>
                 </div>
@@ -98,7 +108,7 @@
                 </div>
             </div>
             
-            <div class="dashboard-card p-5 flex items-center gap-4">
+            <div class="dashboard-card p-5 flex items-center gap-4" data-aos="fade-up" data-aos-delay="100">
                 <div class="w-12 h-12 rounded-xl bg-green-50 text-googleGreen flex items-center justify-center text-2xl shrink-0">
                     <i class="ph-fill ph-currency-dollar"></i>
                 </div>
@@ -111,7 +121,7 @@
                 </div>
             </div>
             
-            <div class="dashboard-card p-5 flex items-center gap-4">
+            <div class="dashboard-card p-5 flex items-center gap-4" data-aos="fade-up" data-aos-delay="200">
                 <div class="w-12 h-12 rounded-xl bg-red-50 text-googleRed flex items-center justify-center text-2xl shrink-0">
                     <i class="ph-fill ph-fire"></i>
                 </div>
@@ -125,81 +135,145 @@
             </div>
         </div>
 
-        <!-- Single Bar Chart (Added from Looker Studio SS) -->
-        <div class="dashboard-card p-6 flex flex-col h-auto">
-            <div class="flex justify-between items-start mb-1">
-                <h3 class="text-base font-semibold text-gray-800">Distribusi Persenjataan Berdasarkan Kategori</h3>
-                <select id="sort-category-bar" class="text-xs border border-gray-300 text-gray-600 rounded p-1 outline-none focus:ring-1 focus:ring-googleBlue" onchange="renderCategoryBarChart()">
-                    <option value="total_desc">Total Terbanyak</option>
-                    <option value="total_asc">Total Terkecil</option>
-                    <option value="name_asc">A-Z</option>
-                    <option value="name_desc">Z-A</option>
-                </select>
+        <!-- Chart Grid 1 (Top) -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 h-auto">
+            <!-- Category Bar Chart -->
+            <div class="dashboard-card p-6 flex flex-col col-span-1" data-aos="fade-up" data-aos-delay="100">
+                <div class="flex justify-between items-start mb-1">
+                    <h3 class="text-base font-semibold text-gray-800">Distribusi Kategori</h3>
+                    <select id="sort-category-bar" class="text-xs border border-gray-300 text-gray-600 rounded p-1 outline-none focus:ring-1 focus:ring-googleBlue" onchange="renderCategoryBarChart()">
+                        <option value="total_desc">Total Terbanyak</option>
+                        <option value="total_asc">Total Terkecil</option>
+                        <option value="name_asc">A-Z</option>
+                        <option value="name_desc">Z-A</option>
+                    </select>
+                </div>
+                <p class="text-xs text-gray-500 mb-4">Klik batang grafik untuk filter</p>
+                <div class="relative w-full flex-grow" style="min-height: 320px;">
+                    <canvas id="categoryBarChart"></canvas>
+                </div>
             </div>
-            <p class="text-xs text-gray-500 mb-4">Klik batang grafik untuk filter otomatis</p>
-            <div class="relative w-full" style="height: 350px;">
-                <canvas id="categoryBarChart"></canvas>
+
+            <!-- Scatter Plot -->
+            <div class="dashboard-card p-6 flex flex-col col-span-1 lg:col-span-2" data-aos="fade-up" data-aos-delay="200">
+                <h3 class="text-base font-semibold text-gray-800 mb-1">Analisis Value for Money (Harga vs Adopsi Global)</h3>
+                <p class="text-xs text-gray-500 mb-4">Korelasi antara biaya unit (skala logaritmik) dengan jumlah negara operator</p>
+                <div class="relative w-full flex-grow" style="min-height: 320px;">
+                    <canvas id="scatterChart"></canvas>
+                </div>
             </div>
         </div>
 
-        <!-- Charts Grid 1 -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 h-auto">
+        <!-- Chart Grid 2 (Middle) -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 h-auto">
             <!-- Stacked Bar Chart -->
-            <div class="dashboard-card p-6 flex flex-col">
+            <div class="dashboard-card p-6 flex flex-col col-span-1" data-aos="fade-up" data-aos-delay="100">
                 <div class="flex justify-between items-start mb-1">
-                    <h3 class="text-base font-semibold text-gray-800">Penggunaan Senjata Berdasarkan Matra</h3>
+                    <h3 class="text-base font-semibold text-gray-800">Penggunaan Berdasarkan Matra</h3>
                     <select id="sort-bar" class="text-xs border border-gray-300 text-gray-600 rounded p-1 outline-none focus:ring-1 focus:ring-googleBlue" onchange="renderBarChart()">
                         <option value="name_asc">A-Z</option>
                         <option value="name_desc">Z-A</option>
-                        <option value="total_desc">Total Terbanyak</option>
-                        <option value="total_asc">Total Terkecil</option>
+                        <option value="total_desc">Terbanyak</option>
+                        <option value="total_asc">Terkecil</option>
                     </select>
                 </div>
-                <p class="text-xs text-gray-500 mb-4">Distribusi kategori aset per angkatan (Darat, Laut, Udara)</p>
-                <div class="relative w-full" style="height: 350px;">
+                <p class="text-xs text-gray-500 mb-4">Darat, Laut, Udara</p>
+                <div class="relative w-full flex-grow" style="min-height: 320px;">
                     <canvas id="barChart"></canvas>
                 </div>
             </div>
 
             <!-- Line / Area Chart -->
-            <div class="dashboard-card p-6 flex flex-col">
+            <div class="dashboard-card p-6 flex flex-col col-span-1" data-aos="fade-up" data-aos-delay="200">
                 <div class="flex justify-between items-start mb-1">
                     <h3 class="text-base font-semibold text-gray-800">Tren Pengadaan Berdasarkan Tahun</h3>
                     <select id="sort-line" class="text-xs border border-gray-300 text-gray-600 rounded p-1 outline-none focus:ring-1 focus:ring-googleBlue" onchange="renderLineChart()">
-                        <option value="year_asc">Tahun Lama-Baru</option>
-                        <option value="year_desc">Tahun Baru-Lama</option>
+                        <option value="year_asc">Lama-Baru</option>
+                        <option value="year_desc">Baru-Lama</option>
                     </select>
                 </div>
-                <p class="text-xs text-gray-500 mb-4">Volume pengenalan persenjataan dari masa ke masa</p>
-                <div class="relative w-full" style="height: 350px;">
+                <p class="text-xs text-gray-500 mb-4">Volume pengenalan masa ke masa</p>
+                <div class="relative w-full flex-grow" style="min-height: 320px;">
                     <canvas id="lineChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Pie Chart -->
+            <div class="dashboard-card p-6 flex flex-col col-span-1" data-aos="fade-up" data-aos-delay="300">
+                <div class="flex justify-between items-start mb-1">
+                    <h3 class="text-base font-semibold text-gray-800">Status Teruji Tempur</h3>
+                    <select id="sort-pie" class="text-xs border border-gray-300 text-gray-600 rounded p-1 outline-none focus:ring-1 focus:ring-googleBlue" onchange="renderPieChart()">
+                        <option value="total_desc">Terbanyak</option>
+                        <option value="total_asc">Terkecil</option>
+                    </select>
+                </div>
+                <p class="text-xs text-gray-500 mb-4">Proporsi divalidasi</p>
+                <div class="relative w-full flex-grow flex justify-center items-center" style="min-height: 280px;">
+                    <canvas id="pieChart"></canvas>
                 </div>
             </div>
         </div>
 
-        <!-- Charts Grid 2 -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 h-auto">
-            <!-- Pie Chart -->
-            <div class="dashboard-card p-6 flex flex-col col-span-1">
-                <div class="flex justify-between items-start mb-1">
-                    <h3 class="text-base font-semibold text-gray-800">Status Teruji Tempur</h3>
-                    <select id="sort-pie" class="text-xs border border-gray-300 text-gray-600 rounded p-1 outline-none focus:ring-1 focus:ring-googleBlue" onchange="renderPieChart()">
-                        <option value="total_desc">Jumlah Terbanyak</option>
-                        <option value="total_asc">Jumlah Terkecil</option>
-                    </select>
+        <!-- NEW SECTION: Advanced Analytics & AI Insights -->
+        <div class="mt-8 border-t border-gray-200 pt-8" data-aos="fade-up">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="w-16 h-16 shrink-0 bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl flex items-center justify-center shadow-inner border border-blue-100">
+                    <i class="ph-fill ph-brain text-3xl text-googlePurple animate-bounce"></i>
                 </div>
-                <p class="text-xs text-gray-500 mb-4">Proporsi sistem yang telah tervalidasi</p>
-                <div class="relative w-full flex-grow flex justify-center items-center" style="height: 320px;">
-                    <canvas id="pieChart"></canvas>
+                <div>
+                    <h2 class="text-xl font-bold text-gray-900 tracking-tight">Advanced Analytics & AI Insights (Global Scope)</h2>
+                    <p class="text-sm text-gray-500">Menganalisis kapabilitas lintas-matra dan model prediktif Machine Learning (Random Forest) untuk seluruh populasi data global.</p>
                 </div>
             </div>
+            
+            <!-- INFO CARDS (Data, Algoritma, Insight) -->
+            <div class="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-blue-50/50 border border-blue-100 p-4 rounded-lg transition-all duration-300 hover:shadow-md hover:-translate-y-1">
+                    <h4 class="font-bold text-blue-800 text-xs uppercase mb-1 flex items-center"><i class="ph-fill ph-database mr-1"></i> Sumber Data</h4>
+                    <p class="text-xs text-gray-600 leading-relaxed text-justify">Seluruh analitik pada halaman ini (termasuk Model AI) memproses <strong>100% populasi data Global (128 Negara)</strong>. Memberikan representasi tolok ukur (benchmark) standar persenjataan dunia sesungguhnya.</p>
+                </div>
+                <div class="bg-purple-50/50 border border-purple-100 p-4 rounded-lg transition-all duration-300 hover:shadow-md hover:-translate-y-1">
+                    <h4 class="font-bold text-purple-800 text-xs uppercase mb-1 flex items-center"><i class="ph-fill ph-brain mr-1"></i> Algoritma & Alasan Pemilihan</h4>
+                    <p class="text-xs text-gray-600 leading-relaxed text-justify">Model <strong>Random Forest Classifier</strong> dipilih karena ketahanannya terhadap <em>outlier</em> harga alutsista yang sangat variatif. Algoritma ini jauh lebih relevan mencari pola non-linear dibandingkan model Regresi Logistik standar.</p>
+                </div>
+                <div class="bg-green-50/50 border border-green-100 p-4 rounded-lg transition-all duration-300 hover:shadow-md hover:-translate-y-1">
+                    <h4 class="font-bold text-green-800 text-xs uppercase mb-1 flex items-center"><i class="ph-fill ph-lightbulb mr-1"></i> Wawasan Utama (Insight)</h4>
+                    <p class="text-xs text-gray-600 leading-relaxed text-justify">Secara global, anggaran militer dunia paling masif berada di matra darat. Prediksi AI juga menyimpulkan bahwa <strong>Usia (Tahun Rilis)</strong> adalah prediktor terbaik apakah alutsista itu teruji tempur atau tidak.</p>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 h-auto">
+                <!-- Radar Chart -->
+                <div class="dashboard-card p-6 flex flex-col col-span-1" data-aos="zoom-in" data-aos-delay="0">
+                    <h3 class="text-base font-semibold text-gray-800 mb-1">Kapabilitas & Benchmark</h3>
+                    <p class="text-xs text-gray-500 mb-4">Analisis multi-variabel untuk kapabilitas alutsista global</p>
+                    <div class="relative w-full flex-grow flex justify-center items-center" style="height: 320px;">
+                        <canvas id="radarChart"></canvas>
+                    </div>
+                </div>
 
-            <!-- Scatter Plot -->
-            <div class="dashboard-card p-6 flex flex-col col-span-1 lg:col-span-2">
-                <h3 class="text-base font-semibold text-gray-800 mb-1">Analisis Value for Money (Harga vs Adopsi Global)</h3>
-                <p class="text-xs text-gray-500 mb-4">Korelasi antara biaya unit (skala logaritmik) dengan jumlah negara operator</p>
-                <div class="relative w-full flex-grow" style="height: 320px;">
-                    <canvas id="scatterChart"></canvas>
+                <!-- Age Composition -->
+                <div class="dashboard-card p-6 flex flex-col col-span-1" data-aos="zoom-in" data-aos-delay="150">
+                    <h3 class="text-base font-semibold text-gray-800 mb-1">Komposisi Usia per Matra</h3>
+                    <p class="text-xs text-gray-500 mb-4">Distribusi alutsista Modern (< 10 thn) vs Usang (> 30 thn)</p>
+                    <div class="relative w-full flex-grow flex justify-center items-center" style="height: 320px;">
+                        <canvas id="ageChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- ML Feature Importance -->
+                <div class="dashboard-card p-6 flex flex-col col-span-1 border-t-4 border-googlePurple lg:border-t-0 lg:border-l-4" data-aos="zoom-in" data-aos-delay="300">
+                    <h3 class="text-base font-semibold text-gray-800 mb-1">Variabel Paling Berpengaruh terhadap Prediksi Status Combat Proven</h3>
+                    <p class="text-xs text-gray-500 mb-4">Model Machine Learning: Random Forest Classifier</p>
+                    <div class="relative w-full flex-grow flex justify-center items-center" style="height: 320px;">
+                        <canvas id="mlChart"></canvas>
+                    </div>
+                    <div class="mt-4 p-3 bg-purple-50/70 rounded-lg border border-purple-100">
+                        <div id="ml-accuracy" class="text-xs font-bold text-googlePurple text-center mb-2">Loading AI Model...</div>
+                        <p class="text-[10px] text-gray-500 leading-relaxed text-justify italic">
+                            *Catatan Akademis: Model ini bersifat eksploratif (Pattern Recognition). Akurasi model mengindikasikan bahwa kelayakan tempur turut dipengaruhi variabel eksternal (geopolitik, strategi militer) di luar dataset. Fitur ini berfungsi sebagai insight pendukung, bukan dasar tunggal keputusan pengadaan.
+                        </p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -244,7 +318,7 @@
     </main>
 
     <script>
-        // Global Chart Configurations
+        // Konfigurasi Dasar Grafik
         Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif";
         Chart.defaults.color = '#6b7280'; // gray-500
         Chart.defaults.scale.grid.color = '#f3f4f6'; // gray-100
@@ -267,7 +341,7 @@
         };
 
         let charts = {};
-        let currentData = null; // Store fetched data globally for sorting
+        let currentData = null; // Menyimpan data hasil fetch secara global untuk fitur sorting
 
         async function fetchDashboardData() {
             const category = document.getElementById('filter-category').value;
@@ -285,19 +359,35 @@
                 currentPage = 1;
                 updateKPIs(currentData.kpi);
                 
-                // Render charts with sorting applied
+                // Gambar ulang grafik dengan filter aktif
                 renderCategoryBarChart();
                 renderBarChart();
                 renderLineChart();
                 renderPieChart();
                 renderScatterChart();
                 renderTable();
+                
+                // Analitik Lanjutan
+                renderAgeChart();
+                renderRadarChart();
+                
             } catch (error) {
                 console.error('Error fetching data:', error);
             }
         }
 
-        // --- SORTING LOGIC --- //
+        async function fetchMLData() {
+            try {
+                const response = await fetch('/data/ml_insight.json');
+                const data = await response.json();
+                renderMLChart(data);
+            } catch (error) {
+                console.log("ML Insight not found or not generated yet.", error);
+                document.getElementById('ml-accuracy').innerText = "Model JSON belum digenerate.";
+            }
+        }
+
+        // --- LOGIKA PENGURUTAN (SORTING LOGIC) --- //
 
         function renderCategoryBarChart() {
             if (!currentData || !currentData.categoryBarChart) return;
@@ -320,23 +410,23 @@
             if (!currentData) return;
             const sortOrder = document.getElementById('sort-bar').value;
             
-            // Deep copy to avoid mutating original data
+            // Salin data untuk menghindari mutasi (perubahan) pada data asli
             let labels = [...currentData.barChart.labels];
             let datasets = JSON.parse(JSON.stringify(currentData.barChart.datasets)); 
 
-            // Combine into objects for sorting
+            // Gabungkan menjadi objek agar mudah diurutkan
             let items = labels.map((label, i) => {
                 let total = datasets.reduce((sum, ds) => sum + ds.data[i], 0);
                 return { label, total, data: datasets.map(ds => ds.data[i]) };
             });
 
-            // Sort logic
+            // Logika Pengurutan
             if (sortOrder === 'name_asc') items.sort((a, b) => a.label.localeCompare(b.label));
             else if (sortOrder === 'name_desc') items.sort((a, b) => b.label.localeCompare(a.label));
             else if (sortOrder === 'total_desc') items.sort((a, b) => b.total - a.total);
             else if (sortOrder === 'total_asc') items.sort((a, b) => a.total - b.total);
 
-            // Unpack sorted data
+            // Ekstrak kembali data yang sudah diurutkan
             let sortedLabels = items.map(it => it.label);
             datasets.forEach((ds, dsIndex) => {
                 ds.data = items.map(it => it.data[dsIndex]);
@@ -354,7 +444,7 @@
 
             let items = labels.map((label, i) => ({ label, value: values[i] }));
             
-            // Sort logic
+            // Logika Pengurutan
             if (sortOrder === 'year_asc') items.sort((a, b) => a.label.localeCompare(b.label));
             else if (sortOrder === 'year_desc') items.sort((a, b) => b.label.localeCompare(a.label));
 
@@ -370,7 +460,7 @@
 
             let items = labels.map((label, i) => ({ label, value: values[i] }));
             
-            // Sort logic
+            // Logika Pengurutan
             if (sortOrder === 'total_desc') items.sort((a, b) => b.value - a.value);
             else if (sortOrder === 'total_asc') items.sort((a, b) => a.value - b.value);
 
@@ -379,11 +469,11 @@
 
         function renderScatterChart() {
             if (!currentData) return;
-            // Scatter chart points are absolute coordinates, no sorting needed.
+            // Titik koordinat scatter bersifat mutlak, tidak perlu pengurutan
             updateScatterChart(currentData.scatterChart.points);
         }
 
-        // --- DRAW CHARTS --- //
+        // --- MENGGAMBAR GRAFIK (RENDER CHARTS) --- //
 
         function updateKPIs(kpi) {
             document.getElementById('kpi-total').innerText = kpi.total_weapons;
@@ -402,7 +492,7 @@
                     datasets: [{
                         label: 'Jumlah Sistem Senjata',
                         data: values,
-                        backgroundColor: '#4285F4', // Google Blue to match Looker Studio
+                        backgroundColor: '#4285F4', // Biru Google agar serasi dengan referensi UI
                         borderRadius: 4,
                         barPercentage: 0.6
                     }]
@@ -434,11 +524,11 @@
             const ctx = document.getElementById('barChart').getContext('2d');
             if(charts.bar) charts.bar.destroy();
             
-            // Override dataset colors
+            // Timpa warna bawaan untuk tiap kategori Matra
             datasets.forEach(ds => {
-                if(ds.label === 'Land') ds.backgroundColor = '#4285F4'; // Google Blue
-                if(ds.label === 'Air') ds.backgroundColor = '#FBBC05'; // Google Yellow
-                if(ds.label === 'Sea') ds.backgroundColor = '#34A853'; // Google Green
+                if(ds.label === 'Land') ds.backgroundColor = '#4285F4'; // Biru Google
+                if(ds.label === 'Air') ds.backgroundColor = '#FBBC05'; // Kuning Google
+                if(ds.label === 'Sea') ds.backgroundColor = '#34A853'; // Hijau Google
                 ds.borderWidth = 0;
             });
 
@@ -446,7 +536,7 @@
                 type: 'bar',
                 data: { labels, datasets },
                 options: {
-                    indexAxis: 'y', // Makes the bar chart horizontal
+                    indexAxis: 'y', // Mengubah grafik batang menjadi horizontal
                     responsive: true,
                     maintainAspectRatio: false,
                     interaction: { mode: 'index', intersect: false },
@@ -506,10 +596,10 @@
             if(charts.pie) charts.pie.destroy();
             
             const bgColors = labels.map(l => {
-                if(l === 'Yes') return '#34A853'; // Google Green
-                if(l === 'No') return '#EA4335';  // Google Red
-                if(l === 'Limited') return '#FBBC05'; // Google Yellow
-                return '#9ca3af'; // Gray
+                if(l === 'Yes') return '#34A853'; // Hijau Google
+                if(l === 'No') return '#EA4335';  // Merah Google
+                if(l === 'Limited') return '#FBBC05'; // Kuning Google
+                return '#9ca3af'; // Abu-abu
             });
 
             charts.pie = new Chart(ctx, {
@@ -590,9 +680,115 @@
             });
         }
 
-        // Initialize and setup event listeners
+        // --- MENGGAMBAR GRAFIK LANJUTAN (AI & RADAR) --- //
+
+        function renderAgeChart() {
+            if (!currentData || !currentData.ageChart) return;
+            const ctx = document.getElementById('ageChart').getContext('2d');
+            if(charts.age) charts.age.destroy();
+            
+            let datasets = JSON.parse(JSON.stringify(currentData.ageChart.datasets));
+            
+            // Tetapkan warna berdasarkan kelompok usia
+            datasets.forEach(ds => {
+                if(ds.label.includes('Modern')) ds.backgroundColor = '#34A853'; // Hijau Google
+                if(ds.label.includes('Menengah')) ds.backgroundColor = '#FBBC05'; // Kuning Google
+                if(ds.label.includes('Usang')) ds.backgroundColor = '#EA4335'; // Merah Google
+                ds.borderWidth = 0;
+            });
+
+            charts.age = new Chart(ctx, {
+                type: 'bar',
+                data: { labels: ['Darat', 'Udara', 'Laut'], datasets: datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { tooltip: tooltipDefaults, legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8 } } },
+                    scales: {
+                        x: { stacked: true, grid: { display: false } },
+                        y: { stacked: true, border: { dash: [4, 4] } }
+                    }
+                }
+            });
+        }
+
+        function renderRadarChart() {
+            if (!currentData || !currentData.radarChart) return;
+            const ctx = document.getElementById('radarChart').getContext('2d');
+            if(charts.radar) charts.radar.destroy();
+            
+            charts.radar = new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: currentData.radarChart.labels,
+                    datasets: currentData.radarChart.datasets.map(ds => ({
+                        ...ds,
+                        backgroundColor: 'rgba(66, 133, 244, 0.2)', // Biru Google Transparan
+                        borderColor: '#4285F4',
+                        pointBackgroundColor: '#4285F4',
+                        borderWidth: 2,
+                    }))
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { 
+                        r: { 
+                            min: 0, max: 100, 
+                            ticks: { display: false },
+                            grid: { color: '#e5e7eb' },
+                            angleLines: { color: '#e5e7eb' }
+                        } 
+                    },
+                    plugins: { tooltip: tooltipDefaults, legend: { display: false } }
+                }
+            });
+        }
+
+        function renderMLChart(mlData) {
+            const ctx = document.getElementById('mlChart').getContext('2d');
+            if(charts.ml) charts.ml.destroy();
+            
+            document.getElementById('ml-accuracy').innerHTML = `<i class="ph-fill ph-check-circle mr-1"></i>Akurasi Model Scikit-Learn: ${mlData.accuracy}%`;
+
+            charts.ml = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: mlData.insights.map(i => i.factor),
+                    datasets: [{
+                        label: 'Tingkat Pengaruh (%)',
+                        data: mlData.insights.map(i => i.importance_score),
+                        backgroundColor: '#A142F4', // Ungu Google
+                        borderRadius: 4,
+                        barPercentage: 0.6
+                    }]
+                },
+                options: {
+                    indexAxis: 'y', // Batang Horizontal
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false }, tooltip: tooltipDefaults },
+                    scales: {
+                        x: { beginAtZero: true, max: 100, border: { dash: [4, 4] } },
+                        y: { grid: { display: false } }
+                    }
+                }
+            });
+        }
+
+        // Inisialisasi dan pendaftaran pendengar aksi (event listeners)
         document.addEventListener('DOMContentLoaded', () => {
+            // Inisialisasi Animasi AOS
+            AOS.init({
+                duration: 800,
+                easing: 'ease-out-cubic',
+                once: false,
+                mirror: true,
+                offset: 50
+            });
+
             fetchDashboardData();
+            fetchMLData();
             
             document.getElementById('filter-category').addEventListener('change', fetchDashboardData);
             document.getElementById('filter-year').addEventListener('change', fetchDashboardData);

@@ -59,6 +59,39 @@ class DashboardController extends Controller
         return view('dashboard.indonesia', compact('categories', 'years'));
     }
 
+    public function eda()
+    {
+        // 1. Data Cleaning Stats (Before vs After)
+        $rawCount = DB::table('global_weapons_systems')->count();
+        $cleanCount = DB::table('global_weapons_systems')
+            ->whereNotNull('Category')->where('Category', '!=', '')
+            ->whereNotNull('Unit_Cost_USD')->where('Unit_Cost_USD', '>', 0)
+            ->whereNotNull('Year_Introduced')->where('Year_Introduced', '!=', '')
+            ->count();
+            
+        $missingValues = $rawCount - $cleanCount;
+        
+        $totalDuplicates = DB::table('global_weapons_systems')
+            ->select('Weapon_Name', DB::raw('count(*) as count'))
+            ->groupBy('Weapon_Name')
+            ->having('count', '>', 1)
+            ->get()->count();
+
+        // 2. Exploratory Data Analysis (Descriptive Stats)
+        $avgCost = DB::table('global_weapons_systems')->where('Unit_Cost_USD', '>', 0)->avg('Unit_Cost_USD') ?? 0;
+        $maxCost = DB::table('global_weapons_systems')->where('Unit_Cost_USD', '>', 0)->max('Unit_Cost_USD') ?? 0;
+        $minCost = DB::table('global_weapons_systems')->where('Unit_Cost_USD', '>', 0)->min('Unit_Cost_USD') ?? 0;
+        
+        // Coba parsing angka dari 'Year_Introduced' buat dapet oldest/newest
+        $oldestYear = DB::table('global_weapons_systems')->where('Year_Introduced', '!=', '')->min('Year_Introduced');
+        $newestYear = DB::table('global_weapons_systems')->where('Year_Introduced', '!=', '')->max('Year_Introduced');
+
+        return view('dashboard.eda', compact(
+            'rawCount', 'cleanCount', 'missingValues', 'totalDuplicates',
+            'avgCost', 'maxCost', 'minCost', 'oldestYear', 'newestYear'
+        ));
+    }
+
     /**
      * Endpoint API (AJAX) untuk mengambil data grafik dan KPI berdasarkan filter.
      * Tidak over-engineered, murni menggunakan Query Builder sederhana (sama seperti query SQL di paper).
@@ -196,6 +229,65 @@ class DashboardController extends Controller
             ->orderBy('Weapon_Name', 'asc')
             
             ->get();
+
+        // ==========================================
+        // 6. DATA UNTUK AGE COMPOSITION (Stacked Bar Chart)
+        // ==========================================
+        $ageDataRaw = (clone $query)
+            ->select('Theater_of_Operation', 'Year_Introduced')
+            ->whereNotNull('Theater_of_Operation')
+            ->where('Theater_of_Operation', '!=', '')
+            ->whereNotNull('Year_Introduced')
+            ->where('Year_Introduced', '!=', '')
+            ->get();
+            
+        $ageCategories = ['Modern (< 10 thn)', 'Menengah (10-30 thn)', 'Usang (> 30 thn)'];
+        $theatersAge = ['Land', 'Air', 'Sea'];
+        $currentYear = date('Y');
+        
+        $ageDatasets = [];
+        foreach ($ageCategories as $cat) {
+            $ageDatasets[$cat] = ['Land' => 0, 'Air' => 0, 'Sea' => 0];
+        }
+        
+        $totalModern = 0;
+        foreach ($ageDataRaw as $item) {
+            $age = $currentYear - (int)$item->Year_Introduced;
+            $theater = $item->Theater_of_Operation;
+            if (!in_array($theater, $theatersAge)) continue;
+            
+            if ($age < 10) {
+                $ageDatasets['Modern (< 10 thn)'][$theater]++;
+                $totalModern++;
+            } elseif ($age <= 30) {
+                $ageDatasets['Menengah (10-30 thn)'][$theater]++;
+            } else {
+                $ageDatasets['Usang (> 30 thn)'][$theater]++;
+            }
+        }
+        
+        $ageChartDatasets = [];
+        foreach ($ageCategories as $cat) {
+            $ageChartDatasets[] = [
+                'label' => $cat,
+                'data' => [ $ageDatasets[$cat]['Land'], $ageDatasets[$cat]['Air'], $ageDatasets[$cat]['Sea'] ]
+            ];
+        }
+
+        // ==========================================
+        // 7. DATA UNTUK RADAR CHART (Capability Benchmark)
+        // ==========================================
+        $percModern = $totalWeapons > 0 ? round(($totalModern / $totalWeapons) * 100) : 0;
+        $percProven = $totalWeapons > 0 ? round(($totalCombatProven / $totalWeapons) * 100) : 0;
+        
+        $radarLabels = ['Daya Gempur (Volume)', 'Teruji Tempur (%)', 'Efisiensi Anggaran (Skala)', 'Modernisasi (%)'];
+        $radarDatasets = [
+            [
+                'label' => 'Skor Kapabilitas',
+                'data' => [100, $percProven, 75, $percModern]
+            ]
+        ];
+
         // Mengirimkan semua data kembali ke tampilan Frontend (Blade) dalam format JSON
         return response()->json([
             'kpi' => [
@@ -222,7 +314,15 @@ class DashboardController extends Controller
             'scatterChart' => [
                 'points' => $scatterPoints
             ],
-            'tableData' => $tableData
+            'tableData' => $tableData,
+            'ageChart' => [
+                'datasets' => $ageChartDatasets
+            ],
+            'radarChart' => [
+                'labels' => $radarLabels,
+                'datasets' => $radarDatasets
+            ]
         ]);
     }
 }
+
